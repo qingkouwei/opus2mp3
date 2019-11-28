@@ -3,20 +3,20 @@
 #include "opus.h"
 #include <sys/time.h>
 #include <unistd.h>
+#include "lame.h"
 
 #define DEFAULT_SAMPLERATEINHz 16000
 #define DEFAULT_CHANNELCONFIG 1
 
 #define MAX_PACKET 1500
 
-#include "lame.h"
+#define WRITE_BUFFER_SIZE 520
+#define READ_BUFFER_SIZE 40
+#define DECODE_OUTPUT_SIZE 320
+
 int main(int argc, char **argv)
 {
-    /*int a[10] = {1,2,3,4,5};
-    int *ptr = (int*)(&a+1);
-    printf("%d,%d\n",*(a+1),*(ptr-1));
-    printf("sizeof(a) = %d,sizeof(&a)= %d,sizeof(*a)=%d,sizeof(a[0]) = %d,sizeof(ptr)=%d\n",
-    sizeof(a), sizeof(&a),sizeof(*a),sizeof(a[0]),sizeof(ptr));*/
+    //统计耗时
     struct timeval tv;
     gettimeofday(&tv,NULL);
     long start = tv.tv_sec*1000000 + tv.tv_usec;
@@ -50,20 +50,13 @@ int main(int argc, char **argv)
     int sampleRateInHz = DEFAULT_SAMPLERATEINHz;
     int channelConfig = DEFAULT_CHANNELCONFIG;
 
-    
-    
-    /* We need to allocate for 16-bit PCM data, but we store it as unsigned char. */
-
-
     OpusDecoder *pOpusDec = opus_decoder_create(sampleRateInHz, channelConfig, &error);
     if (error != OPUS_OK)
     {
         fprintf(stderr, "Cannot create decoder: %s\n", opus_strerror(error));
         goto failure;
     }
-    #define WRITE_BUFFER_SIZE 520
-    #define READ_BUFFER_SIZE 40
-    #define DECODE_OUTPUT_SIZE 320
+    
     fbytes = (unsigned char*)malloc(WRITE_BUFFER_SIZE);
     out = (short *)malloc(640 * sizeof(short));
     lame_global_flags *lame = NULL;
@@ -75,56 +68,52 @@ int main(int argc, char **argv)
     lame_set_quality(lame, 7);
     lame_init_params(lame);
     int i = 0;
+    int flag = 0;
     while (1)
     {
     gettimeofday(&tv,NULL);
     long startDec = tv.tv_sec*1000000 + tv.tv_usec;
-        unsigned char data[READ_BUFFER_SIZE];
-        num_read = fread(data, 1, READ_BUFFER_SIZE, fin);
+    unsigned char data[READ_BUFFER_SIZE];
+    num_read = fread(data, 1, READ_BUFFER_SIZE, fin);
         
-        if (num_read > 0)
-        {
-            //printf("count = %d\n", i++);
-            int output_samples = opus_decode(pOpusDec, data, num_read, out, DECODE_OUTPUT_SIZE, 0);
-            int result = lame_encode_buffer(lame, out, out,output_samples, fbytes, WRITE_BUFFER_SIZE);
+    if (num_read > 0)
+    {
+        int output_samples = opus_decode(pOpusDec, data, num_read, out, DECODE_OUTPUT_SIZE, 0);
+        int result = lame_encode_buffer(lame, out, out,output_samples, fbytes, WRITE_BUFFER_SIZE);
+        if (fwrite(fbytes, 1, result, fout) != (unsigned)(result)){
+            printf("write error,output_samples = %d, result = %d\n",output_samples,result);
+            goto failure;
+        }
+    }
+    else{
+        int result = lame_encode_flush(lame, fbytes, WRITE_BUFFER_SIZE);
+        printf("result:%d\n",result);
+        if(result >= 0){
             if (fwrite(fbytes, 1, result, fout) != (unsigned)(result)){
-                printf("write error,output_samples = %d, result = %d\n",output_samples,result);
-                fprintf(stderr, "111 Error writing.\n");
+                fprintf(stderr, "222 Error writing.\n");
                 goto failure;
             }
         }
-        else{
-            int result = lame_encode_flush(lame, fbytes, WRITE_BUFFER_SIZE);
-            printf("result:%d\n",result);
-            if(result >= 0){
-                if (fwrite(fbytes, 1, result, fout) != (unsigned)(result)){
-                    fprintf(stderr, "222 Error writing.\n");
-                    goto failure;
-                }
-            }
-            
-            lame_close(lame);
-            break;
-        }
-        gettimeofday(&tv,NULL);
-        long endDec = tv.tv_sec*1000000 + tv.tv_usec;   
-        printf("decode %d speend:%lld\n", i++, endDec - startDec);    
+        
+        lame_close(lame);
+        break;
+    }
+    gettimeofday(&tv,NULL);
+    long endDec = tv.tv_sec*1000000 + tv.tv_usec;   
+    //printf("decode %d speend:%lld\n", i++, endDec - startDec);    
     }
     fclose(fout);
 failure:
-    /*opus_encoder_destroy(enc);
-    opus_decoder_destroy(dec);
-    free(data[0]);
-    free(data[1]);
+    opus_decoder_destroy(pOpusDec);
     if (fin)
         fclose(fin);
     if (fout)
         fclose(fout);
     free(in);
     free(out);
-    free(fbytes);*/
+    free(fbytes);
     gettimeofday(&tv,NULL);
     long end = tv.tv_sec*1000000 + tv.tv_usec;
-    printf("spend  = %lld\n", end - start);
+    printf("spend  = %ld\n", end - start);
 return 0;
 }

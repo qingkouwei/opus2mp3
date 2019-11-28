@@ -13,8 +13,6 @@ import os
 from time import time
 
 t1 = time()
-#os.system("./opus2mp3 armnormal.audio audio.mp3")
 os.system("./opus2mp3 1574153185044.audio audio.mp3")
-#os.system("./opus2mp3 pureopus60s.opus audio.mp3")
 t2 = time()
 print("Spend time: %s" % (t2 - t1))
