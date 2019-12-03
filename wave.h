@@ -24,4 +24,9 @@ struct WAVE_DATA{
     char subchunk2Id[4];
     uint32_t subchunk2Size;
 };
+typedef struct WAVE {
+   struct WAVE_HEADER riff;
+   struct WAVE_FMT fmt;
+   struct WAVE_DATA data;
+} Wav;
 #endif

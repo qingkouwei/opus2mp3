@@ -18,6 +18,10 @@ include_directories(
         libopus/src)
 
 add_executable(
+        wavparser
+        waveparser.c
+        )
+add_executable(
         opus2mp3
         libopus/src/opus_multistream_decoder.c
         libopus/src/opus_multistream_encoder.c
