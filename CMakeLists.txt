@@ -22,6 +22,10 @@ add_executable(
         waveparser.c
         )
 add_executable(
+        wavgen
+        wavgen.c
+        )
+add_executable(
         opus2mp3
         libopus/src/opus_multistream_decoder.c
         libopus/src/opus_multistream_encoder.c
