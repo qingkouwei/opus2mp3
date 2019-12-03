@@ -179,6 +179,7 @@ add_executable(
         liblame/vbrquantize.c 
         liblame/version.c
         main.c
+        wavwriter.c
         )
 
 add_definitions(-DOUTSIDE_SPEEX -DOPUS_BUILD -DSTDC_HEADERS -DVAR_ARRAYS)
